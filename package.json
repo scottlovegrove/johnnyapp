@@ -1,0 +1,21 @@
+{
+  "name": "johnny-monorepo",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,web -c blue,magenta \"npm run dev -w packages/server\" \"npm run dev -w packages/web\"",
+    "build": "npm run build -w packages/shared && npm run build -w packages/web && npm run build -w packages/server",
+    "start": "node packages/server/dist/index.js",
+    "typecheck": "tsc -b packages/shared packages/server packages/web"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "typescript": "^5.9.3"
+  }
+}
