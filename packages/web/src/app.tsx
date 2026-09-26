@@ -6,10 +6,10 @@ import type {
     SessionInfo,
     TranscriptItem,
 } from '@johnny/shared'
-import { Composer } from './components/Composer'
-import { PermissionBar } from './components/PermissionBar'
-import { Sidebar } from './components/Sidebar'
-import { Transcript } from './components/Transcript'
+import { Composer } from './components/composer'
+import { PermissionBar } from './components/permission-bar'
+import { Sidebar } from './components/sidebar'
+import { Transcript } from './components/transcript'
 import { socket, useSocket, useSocketStatus } from './lib/ws'
 
 export default function App() {
