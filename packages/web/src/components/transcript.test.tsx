@@ -98,6 +98,11 @@ describe('Transcript', () => {
         expect(screen.queryByText(/reminder/)).not.toBeInTheDocument()
     })
 
+    it('shows the resuming loader while a session is being re-attached', () => {
+        render(<Transcript items={[]} busy={false} resuming />)
+        expect(screen.getByRole('status')).toHaveTextContent(/Resuming session/)
+    })
+
     it('renders user messages, errors and non-normal turn ends', () => {
         const items: TranscriptItem[] = [
             { kind: 'user', id: 'u', text: 'do it', at: '' },

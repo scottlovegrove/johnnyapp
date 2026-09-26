@@ -63,7 +63,10 @@ export class SessionManagerService {
         this.agents = agents
         this.store = store
         for (const record of store.list()) {
-            this.sessions.set(record.id, this.newSession({ ...record, busy: false }, false))
+            this.sessions.set(
+                record.id,
+                this.newSession({ ...record, busy: false, resuming: false }, false),
+            )
         }
     }
 
@@ -90,6 +93,7 @@ export class SessionManagerService {
             lastActiveAt: at,
             origin: 'johnny',
             busy: false,
+            resuming: false,
         }
         this.sessions.set(id, this.newSession(info, true))
         this.store.upsert(info)
@@ -118,6 +122,7 @@ export class SessionManagerService {
                 lastActiveAt: at,
                 origin: 'agent',
                 busy: false,
+                resuming: false,
             }
             this.sessions.set(info.id, this.newSession(info, false))
             this.store.upsert(info)
@@ -246,24 +251,37 @@ export class SessionManagerService {
     }
 
     private async attach(session: Session): Promise<void> {
-        const adapter = await this.adapter(session.info.agentId)
         const { id, cwd } = session.info
-        if (!session.historyLoaded && adapter.capabilities.loadSession) {
-            session.replaying = true
-            try {
-                await adapter.loadSession(id, cwd)
-            } finally {
-                session.replaying = false
-                session.replayUserMessageId = null
+        session.info.resuming = true
+        this.emitSession(session)
+        try {
+            const adapter = await this.adapter(session.info.agentId)
+            if (!session.historyLoaded && adapter.capabilities.loadSession) {
+                session.replaying = true
+                try {
+                    await adapter.loadSession(id, cwd)
+                } finally {
+                    session.replaying = false
+                    session.replayUserMessageId = null
+                }
+                session.historyLoaded = true
+            } else if (adapter.capabilities.resumeSession) {
+                await adapter.resumeSession(id, cwd)
+            } else {
+                throw new Error(`${adapter.name} cannot resume earlier sessions`)
             }
-            session.historyLoaded = true
-        } else if (adapter.capabilities.resumeSession) {
-            await adapter.resumeSession(id, cwd)
-        } else {
-            throw new Error(`${adapter.name} cannot resume earlier sessions`)
+            session.attached = true
+        } finally {
+            session.info.resuming = false
+            this.emitSession(session)
         }
-        session.attached = true
         this.emit(id, this.transcriptMessage(session))
+    }
+
+    /** Session state changed: tell its subscribers and the sidebar. */
+    private emitSession(session: Session): void {
+        this.emit(session.info.id, { type: 'session', session: { ...session.info } })
+        this.announce(session.info)
     }
 
     /** Adopt the agent's own title for the session once it has one. */

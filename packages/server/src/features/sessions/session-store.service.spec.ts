@@ -16,6 +16,7 @@ const info: SessionInfo = {
     lastActiveAt: '2026-01-01T10:00:00.000Z',
     origin: 'johnny',
     busy: true,
+    resuming: true,
 }
 
 describe('SessionStoreService', () => {
@@ -24,7 +25,7 @@ describe('SessionStoreService', () => {
     it('persists everything but live state and reads it back in a new instance', () => {
         new SessionStoreService().upsert(info)
 
-        const { busy: _busy, ...record } = info
+        const { busy: _busy, resuming: _resuming, ...record } = info
         expect(JSON.parse(readFileSync(FILE, 'utf8'))).toEqual({ sessions: [record], ignored: [] })
         const reloaded = new SessionStoreService()
         expect(reloaded.list()).toEqual([record])
@@ -55,7 +56,7 @@ describe('SessionStoreService', () => {
     })
 
     it('reads the earlier bare-array file format', () => {
-        const { busy: _busy, ...record } = info
+        const { busy: _busy, resuming: _resuming, ...record } = info
         writeFileSync(FILE, JSON.stringify([record]))
         const store = new SessionStoreService()
         expect(store.list()).toEqual([record])

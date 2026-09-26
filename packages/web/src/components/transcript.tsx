@@ -4,6 +4,7 @@ import { Brain, CheckCircle2, CircleDashed, Loader2, Wrench, XCircle } from 'luc
 import type { SessionUpdate, TranscriptItem } from '@johnny/shared'
 import type { ToolCall, ToolCallContent, ToolCallUpdate } from '@agentclientprotocol/sdk'
 import { cn } from '@/lib/utils'
+import { Resuming } from './resuming'
 
 type ToolStatus = 'pending' | 'in_progress' | 'completed' | 'failed'
 
@@ -211,13 +212,21 @@ function ToolGroup({ tools }: { tools: ToolBlock[] }) {
     )
 }
 
-export function Transcript({ items, busy }: { items: TranscriptItem[]; busy: boolean }) {
+interface Props {
+    items: TranscriptItem[]
+    busy: boolean
+    resuming?: boolean
+}
+
+export function Transcript({ items, busy, resuming = false }: Props) {
     const blocks = useMemo(() => buildBlocks(items), [items])
     const bottom = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
         bottom.current?.scrollIntoView({ block: 'end' })
     }, [blocks])
+
+    if (resuming && blocks.length === 0) return <Resuming />
 
     return (
         <div className="flex-1 overflow-y-auto px-4 py-4">

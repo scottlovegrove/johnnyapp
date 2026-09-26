@@ -100,3 +100,42 @@
 .prose-chat :is(h1, h2, h3) {
   @apply font-semibold;
 }
+
+/* Resuming loader: a baton keeping time while the score fills back in. */
+@keyframes baton-beat {
+  0%,
+  100% {
+    transform: rotate(-28deg);
+  }
+  50% {
+    transform: rotate(28deg);
+  }
+}
+@keyframes note-in {
+  0%,
+  100% {
+    opacity: 0.15;
+    transform: translateY(2px);
+  }
+  20%,
+  60% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.baton {
+  transform-origin: 50% 100%;
+  animation: baton-beat 1.2s ease-in-out infinite;
+}
+.note {
+  animation: note-in 3.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .baton,
+  .note {
+    animation: none;
+  }
+  .note {
+    opacity: 1;
+  }
+}

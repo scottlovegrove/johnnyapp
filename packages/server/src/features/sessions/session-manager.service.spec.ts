@@ -105,6 +105,7 @@ describe('SessionManagerService', () => {
             cwd: '/tmp/proj',
             origin: 'johnny',
             busy: false,
+            resuming: false,
         })
         expect(service.list()).toEqual([info])
         expect(announced).toEqual([{ type: 'session', session: info }])
@@ -283,10 +284,18 @@ describe('SessionManagerService', () => {
                     update: expect.objectContaining({ sessionUpdate: 'agent_message_chunk' }),
                 }),
             ])
-            // Replay arrives as one transcript, not item by item, and never
-            // toggles busy.
+            // Replay arrives as one transcript, not item by item; the session
+            // is flagged as resuming while it happens and never busy.
             expect(itemsOf(received)).toEqual([])
-            expect(messagesOfType(received, 'session')).toEqual([])
+            expect(
+                messagesOfType(received, 'session').map((m) => [
+                    m.session.resuming,
+                    m.session.busy,
+                ]),
+            ).toEqual([
+                [true, false],
+                [false, false],
+            ])
             expect(adapter.loadSession).toHaveBeenCalledWith(info.id, project.path)
         })
 

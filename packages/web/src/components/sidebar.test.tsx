@@ -15,6 +15,7 @@ const session: SessionInfo = {
     lastActiveAt: '2026-01-01T10:00:00.000Z',
     origin: 'johnny',
     busy: false,
+    resuming: false,
 }
 const imported: SessionInfo = {
     ...session,
