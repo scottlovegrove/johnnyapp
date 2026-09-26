@@ -46,11 +46,12 @@ export class SessionManagerService {
     }
 
     list(): SessionInfo[] {
-        return [...this.sessions.values()].map((s) => s.info)
+        return [...this.sessions.values()].map((s) => ({ ...s.info }))
     }
 
     get(sessionId: string): SessionInfo | undefined {
-        return this.sessions.get(sessionId)?.info
+        const session = this.sessions.get(sessionId)
+        return session ? { ...session.info } : undefined
     }
 
     async create(agentId: string, project: Project): Promise<SessionInfo> {
@@ -66,7 +67,7 @@ export class SessionManagerService {
             busy: false,
         }
         this.sessions.set(id, { info, transcript: [], pending: null })
-        for (const sub of this.globalSubscribers) sub({ type: 'session', session: info })
+        for (const sub of this.globalSubscribers) sub({ type: 'session', session: { ...info } })
         return info
     }
 
@@ -76,7 +77,7 @@ export class SessionManagerService {
         if (session.info.busy) throw new Error('Session is busy')
 
         session.info.busy = true
-        this.emit(sessionId, { type: 'session', session: session.info })
+        this.emit(sessionId, { type: 'session', session: { ...session.info } })
         this.push(session, { kind: 'user', id: randomUUID(), text, at: now() })
 
         try {
@@ -95,7 +96,7 @@ export class SessionManagerService {
             })
         } finally {
             session.info.busy = false
-            this.emit(sessionId, { type: 'session', session: session.info })
+            this.emit(sessionId, { type: 'session', session: { ...session.info } })
         }
     }
 
@@ -176,7 +177,7 @@ export class SessionManagerService {
             if (s.info.busy) {
                 s.info.busy = false
                 this.push(s, { kind: 'error', id: randomUUID(), message, at: now() })
-                this.emit(s.info.id, { type: 'session', session: s.info })
+                this.emit(s.info.id, { type: 'session', session: { ...s.info } })
             }
         }
     }
