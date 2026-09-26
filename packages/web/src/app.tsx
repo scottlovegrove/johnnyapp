@@ -10,13 +10,14 @@ import { Composer } from './components/composer'
 import { PermissionBar } from './components/permission-bar'
 import { Sidebar } from './components/sidebar'
 import { Transcript } from './components/transcript'
+import { useSessionRoute } from './lib/session-route'
 import { socket, useSocket, useSocketStatus } from './lib/ws'
 
 export default function App() {
     const [agents, setAgents] = useState<AgentInfo[]>([])
     const [projects, setProjects] = useState<Project[]>([])
     const [sessions, setSessions] = useState<SessionInfo[]>([])
-    const [activeId, setActiveId] = useState<string | null>(null)
+    const [activeId, setActiveId] = useSessionRoute()
     const [transcript, setTranscript] = useState<TranscriptItem[]>([])
     const [pending, setPending] = useState<PermissionRequest | null>(null)
     const [error, setError] = useState<string | null>(null)
@@ -31,7 +32,13 @@ export default function App() {
             .then(setProjects)
         fetch('/api/sessions')
             .then((r) => r.json())
-            .then(setSessions)
+            .then((list: SessionInfo[]) => {
+                setSessions(list)
+                // A stale link to a session that no longer exists falls back to the start page.
+                if (activeId && !list.some((s) => s.id === activeId)) setActiveId(null)
+            })
+        // Runs once: the route check only matters for the id present at first load.
+        // oxlint-disable-next-line react/exhaustive-deps
     }, [])
 
     useEffect(() => {
@@ -89,15 +96,20 @@ export default function App() {
         return body as T
     }
 
-    const createSession = useCallback(async (agentId: string, projectId: string) => {
-        const session = await api<SessionInfo>('/api/sessions', {
-            method: 'POST',
-            body: JSON.stringify({ agentId, projectId }),
-        }).catch(() => null)
-        if (!session) return
-        setSessions((prev) => (prev.some((s) => s.id === session.id) ? prev : [session, ...prev]))
-        setActiveId(session.id)
-    }, [])
+    const createSession = useCallback(
+        async (agentId: string, projectId: string) => {
+            const session = await api<SessionInfo>('/api/sessions', {
+                method: 'POST',
+                body: JSON.stringify({ agentId, projectId }),
+            }).catch(() => null)
+            if (!session) return
+            setSessions((prev) =>
+                prev.some((s) => s.id === session.id) ? prev : [session, ...prev],
+            )
+            setActiveId(session.id)
+        },
+        [setActiveId],
+    )
 
     const importSessions = useCallback(async (agentId: string, projectId: string) => {
         const added = await api<SessionInfo[]>('/api/sessions/import', {
@@ -108,11 +120,11 @@ export default function App() {
         setSessions((prev) => [...added.filter((a) => !prev.some((s) => s.id === a.id)), ...prev])
     }, [])
 
-    const removeSession = useCallback(async (id: string) => {
+    async function removeSession(id: string) {
         await api(`/api/sessions/${id}`, { method: 'DELETE' }).catch(() => null)
         setSessions((prev) => prev.filter((s) => s.id !== id))
-        setActiveId((current) => (current === id ? null : current))
-    }, [])
+        if (activeId === id) setActiveId(null)
+    }
 
     const addProject = useCallback(async (path: string) => {
         const project = await api<Project>('/api/projects', {
