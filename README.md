@@ -19,10 +19,10 @@ Flags: `--port 56469`, `--host 127.0.0.1` (pass `0.0.0.0` to expose on your netw
 ## Develop
 
 ```sh
-npm run dev          # server on :56469 (tsx watch) + Vite on :5173 with /api and /ws proxied
+npm run dev          # server on :56469 (nest start --watch) + Vite on :56470 with /api and /ws proxied
 ```
 
-Open `http://localhost:5173/?token=<token>` once so the cookie is set (the Vite proxy forwards it). Set `JOHNNY_DEV=1` to stop the server opening a browser tab.
+Open `http://localhost:56470/?token=<token>` once so the cookie is set (the Vite proxy forwards it). Set `JOHNNY_DEV=1` to stop the server opening a browser tab.
 
 ## Tooling
 
@@ -38,12 +38,27 @@ A husky pre-commit hook runs `type-check` and `check:fix` against the staged fil
 
 Dependencies are pinned to exact versions (`save-exact=true` in `.npmrc`) and kept current by Renovate (`renovate.json`), which groups related packages and automerges minor/patch bumps once CI passes.
 
+## Server layout
+
+`packages/server/src` follows the same layering as the automations backend:
+
+```
+main.ts             bootstrap (Nest factory, ws adapter, shutdown hooks)
+app/                AppModule: wires modules, global ZodValidationPipe, auth middleware
+controllers/        thin HTTP controllers + the websocket gateway, one module per resource
+features/           services holding the behaviour (agents, projects, sessions)
+infrastructure/     cross-cutting plumbing (options, token)
+middleware/         express middleware (auth)
+```
+
+Controllers depend on features; features never import controllers. Request bodies are validated with `nestjs-zod` DTOs.
+
 ## Layout
 
 ```
 packages/
   shared/   websocket message types shared by server and web
-  server/   Hono HTTP + websocket server, ACP client, session manager, serves the built SPA
+  server/   NestJS app: controllers (HTTP + websocket gateway), features (services), infrastructure; serves the built SPA
   web/      React SPA (Vite, Tailwind, shadcn-style components)
 ```
 

@@ -9,7 +9,7 @@ export default defineConfig({
         alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
     },
     server: {
-        port: 5173,
+        port: 56470,
         proxy: {
             '/api': 'http://127.0.0.1:56469',
             '/ws': { target: 'ws://127.0.0.1:56469', ws: true },

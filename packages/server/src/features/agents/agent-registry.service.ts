@@ -1,10 +1,8 @@
-import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
+import { Injectable, type OnApplicationShutdown } from '@nestjs/common'
 import type { AgentInfo } from '@johnny/shared'
-import { AcpAgent, type AcpAgentSpec } from './acp.js'
-import type { AgentAdapter, AgentEvents } from './types.js'
-
-const require = createRequire(import.meta.url)
+import { AcpAgent } from './acp-agent'
+import type { AcpAgentSpec, AgentAdapter, AgentEvents } from './agent.types'
 
 /**
  * Locate the bin script of a bundled ACP adapter package so it can be run with
@@ -28,11 +26,10 @@ const specs: AcpAgentSpec[] = [
     },
 ]
 
-export class AgentRegistry {
-    private adapters = new Map<string, AgentAdapter>()
-    private failures = new Map<string, string>()
-
-    constructor(private readonly events: (agentId: string) => AgentEvents) {}
+@Injectable()
+export class AgentRegistryService implements OnApplicationShutdown {
+    private readonly adapters = new Map<string, AgentAdapter>()
+    private readonly failures = new Map<string, string>()
 
     list(): AgentInfo[] {
         return specs.map((s) => {
@@ -41,8 +38,12 @@ export class AgentRegistry {
         })
     }
 
-    /** Get a running adapter, starting it on first use. */
-    async get(agentId: string): Promise<AgentAdapter> {
+    /**
+     * Get a running adapter, starting it on first use. `events` is only used
+     * when the adapter has to be started; the first caller's sink stays wired
+     * for the adapter's lifetime.
+     */
+    async get(agentId: string, events: AgentEvents): Promise<AgentAdapter> {
         const existing = this.adapters.get(agentId)
         if (existing) return existing
 
@@ -50,13 +51,12 @@ export class AgentRegistry {
         if (!spec) throw new Error(`Unknown agent "${agentId}"`)
 
         const adapter = new AcpAgent(spec)
-        const baseEvents = this.events(agentId)
         try {
             await adapter.start({
-                ...baseEvents,
+                ...events,
                 closed: (err) => {
                     this.adapters.delete(agentId)
-                    baseEvents.closed(err)
+                    events.closed(err)
                 },
             })
         } catch (err) {
@@ -68,7 +68,7 @@ export class AgentRegistry {
         return adapter
     }
 
-    stopAll(): void {
+    onApplicationShutdown(): void {
         for (const a of this.adapters.values()) a.stop()
         this.adapters.clear()
     }

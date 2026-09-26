@@ -1,6 +1,5 @@
 import type {
     PermissionOption,
-    RequestPermissionOutcome,
     SessionUpdate,
     StopReason,
     ToolCallUpdate,
@@ -32,4 +31,10 @@ export interface AgentAdapter {
     stop(): void
 }
 
-export type PermissionOutcome = RequestPermissionOutcome
+export interface AcpAgentSpec {
+    id: string
+    name: string
+    command: string
+    args: string[]
+    env?: Record<string, string>
+}

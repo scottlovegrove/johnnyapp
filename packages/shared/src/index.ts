@@ -49,12 +49,15 @@ export interface PermissionRequest {
     options: PermissionOption[]
 }
 
-/** Browser → server over the websocket. */
+/**
+ * Browser → server over the websocket. Uses the `{ event, data }` envelope the
+ * server's websocket layer dispatches on.
+ */
 export type ClientMessage =
-    | { type: 'subscribe'; sessionId: string }
-    | { type: 'prompt'; sessionId: string; text: string }
-    | { type: 'cancel'; sessionId: string }
-    | { type: 'permission'; requestId: string; optionId: string | null }
+    | { event: 'subscribe'; data: { sessionId: string } }
+    | { event: 'prompt'; data: { sessionId: string; text: string } }
+    | { event: 'cancel'; data: { sessionId: string } }
+    | { event: 'permission'; data: { requestId: string; optionId: string | null } }
 
 /** Server → browser over the websocket. */
 export type ServerMessage =

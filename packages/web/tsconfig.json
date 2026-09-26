@@ -10,10 +10,15 @@
         "composite": false,
         "declaration": false,
         "sourceMap": false,
-        "baseUrl": ".",
-        "paths": { "@/*": ["./src/*"] },
+        "paths": {
+            "@/*": ["./src/*"]
+        },
         "types": ["vite/client"]
     },
     "include": ["src"],
-    "references": [{ "path": "../shared" }]
+    "references": [
+        {
+            "path": "../shared"
+        }
+    ]
 }

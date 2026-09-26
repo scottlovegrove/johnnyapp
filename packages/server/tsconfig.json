@@ -3,7 +3,10 @@
     "compilerOptions": {
         "rootDir": "src",
         "outDir": "dist",
-        "types": ["node"]
+        "types": ["node"],
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "verbatimModuleSyntax": false
     },
     "include": ["src"],
     "references": [{ "path": "../shared" }]

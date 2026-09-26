@@ -38,7 +38,7 @@ export default function App() {
         if (!activeId) return
         setTranscript([])
         setPending(null)
-        socket.send({ type: 'subscribe', sessionId: activeId })
+        socket.send({ event: 'subscribe', data: { sessionId: activeId } })
     }, [activeId])
 
     useSocket((msg) => {
@@ -150,9 +150,8 @@ export default function App() {
                                 request={pending}
                                 onChoose={(optionId) =>
                                     socket.send({
-                                        type: 'permission',
-                                        requestId: pending.requestId,
-                                        optionId,
+                                        event: 'permission',
+                                        data: { requestId: pending.requestId, optionId },
                                     })
                                 }
                             />
@@ -160,9 +159,14 @@ export default function App() {
                         <Composer
                             busy={active.busy}
                             onSend={(text) =>
-                                socket.send({ type: 'prompt', sessionId: active.id, text })
+                                socket.send({
+                                    event: 'prompt',
+                                    data: { sessionId: active.id, text },
+                                })
                             }
-                            onCancel={() => socket.send({ type: 'cancel', sessionId: active.id })}
+                            onCancel={() =>
+                                socket.send({ event: 'cancel', data: { sessionId: active.id } })
+                            }
                         />
                     </>
                 ) : (

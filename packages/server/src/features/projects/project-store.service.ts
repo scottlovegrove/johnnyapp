@@ -1,13 +1,15 @@
 import { randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { basename, join, resolve } from 'node:path'
+import { Injectable } from '@nestjs/common'
 import type { Project } from '@johnny/shared'
-import { CONFIG_DIR } from './auth.js'
+import { CONFIG_DIR } from '../../infrastructure/token/token.service'
 
 const FILE = join(CONFIG_DIR, 'projects.json')
 
 /** Registered project directories, persisted as JSON in the config dir. */
-export class ProjectStore {
+@Injectable()
+export class ProjectStoreService {
     private projects: Project[] = []
 
     constructor() {

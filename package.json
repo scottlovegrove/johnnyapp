@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "concurrently -n server,web -c blue,magenta \"npm run dev -w packages/server\" \"npm run dev -w packages/web\"",
     "build": "npm run build -w packages/shared && npm run build -w packages/web && npm run build -w packages/server",
-    "start": "node packages/server/dist/index.js",
+    "start": "node packages/server/dist/main.js",
     "type-check": "tsc -b packages/shared packages/server packages/web",
     "lint": "oxlint .",
     "lint:fix": "oxlint . --fix",
@@ -19,14 +19,21 @@
     "prepare": "husky"
   },
   "engines": {
-    "node": ">=22 <25",
-    "npm": ">=10"
+    "node": ">=24.15.0 <25",
+    "npm": ">=11"
   },
   "devDependencies": {
+    "@nestjs/cli": "12.0.7",
+    "@nestjs/schematics": "12.0.5",
     "concurrently": "9.2.4",
     "husky": "9.1.7",
     "oxfmt": "0.68.0",
     "oxlint": "1.83.0",
-    "typescript": "5.9.3"
+    "typescript": "6.0.3"
+  },
+  "overrides": {
+    "nestjs-zod": {
+      "@nestjs/common": "12.1.0"
+    }
   }
 }

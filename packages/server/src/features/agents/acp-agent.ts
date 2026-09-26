@@ -1,23 +1,16 @@
-import { spawn, type ChildProcess } from 'node:child_process'
+import { type ChildProcess, spawn } from 'node:child_process'
 import { Readable, Writable } from 'node:stream'
 import {
+    type ClientConnection,
+    type ClientContext,
     client,
     methods,
     ndJsonStream,
     PROTOCOL_VERSION,
-    type ClientConnection,
-    type ClientContext,
     type StopReason,
 } from '@agentclientprotocol/sdk'
-import type { AgentAdapter, AgentEvents } from './types.js'
-
-export interface AcpAgentSpec {
-    id: string
-    name: string
-    command: string
-    args: string[]
-    env?: Record<string, string>
-}
+import { Logger } from '@nestjs/common'
+import type { AcpAgentSpec, AgentAdapter, AgentEvents } from './agent.types'
 
 /**
  * Drives any agent that speaks ACP over stdio. One child process per adapter;
@@ -27,12 +20,16 @@ export class AcpAgent implements AgentAdapter {
     readonly id: string
     readonly name: string
 
+    private readonly logger: Logger
+    private readonly spec: AcpAgentSpec
     private child?: ChildProcess
     private conn?: ClientConnection
 
-    constructor(private readonly spec: AcpAgentSpec) {
+    constructor(spec: AcpAgentSpec) {
+        this.spec = spec
         this.id = spec.id
         this.name = spec.name
+        this.logger = new Logger(`AcpAgent:${spec.id}`)
     }
 
     async start(events: AgentEvents): Promise<void> {
@@ -47,7 +44,7 @@ export class AcpAgent implements AgentAdapter {
         this.child = child
 
         child.stderr?.on('data', (chunk: Buffer) => {
-            process.stderr.write(`[${this.id}] ${chunk}`)
+            this.logger.warn(chunk.toString().trimEnd())
         })
 
         if (!child.stdin || !child.stdout) {
@@ -84,7 +81,7 @@ export class AcpAgent implements AgentAdapter {
             protocolVersion: PROTOCOL_VERSION,
             clientCapabilities: { fs: { readTextFile: false, writeTextFile: false } },
         })
-        console.log(`[${this.id}] connected, protocol v${init.protocolVersion}`)
+        this.logger.log(`connected, protocol v${init.protocolVersion}`)
     }
 
     private get agent(): ClientContext {
