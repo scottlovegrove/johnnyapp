@@ -34,7 +34,13 @@ class Socket {
             const msg = JSON.parse(evt.data as string) as ServerMessage
             for (const l of this.listeners) l(msg)
         }
-        ws.onclose = () => {
+        ws.onclose = (evt) => {
+            // 1008 is the server refusing the connection for lack of a valid
+            // cookie: the session expired or the token was rotated.
+            if (evt.code === 1008) {
+                redirectToLogin()
+                return
+            }
             this.setStatus('closed')
             const delay = Math.min(10_000, 500 * 2 ** this.retry++)
             setTimeout(() => this.connect(), delay)
@@ -60,6 +66,12 @@ class Socket {
         this.statusListeners.add(listener)
         return () => this.statusListeners.delete(listener)
     }
+}
+
+/** Hand over to the login page, coming back to the current session afterwards. */
+export function redirectToLogin() {
+    const next = encodeURIComponent(location.pathname + location.search)
+    location.assign(`/login?next=${next}`)
 }
 
 export const socket = new Socket()

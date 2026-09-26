@@ -16,7 +16,19 @@ Sessions persist across restarts. Johnny keeps an index in `~/.config/johnny/ses
 
 On first start a token is generated and stored in `~/.config/johnny/token`. The printed URL includes it and sets a cookie; every request without that cookie is rejected. Anyone who can reach the server can run shell commands on your machine through the agent, so keep the token private.
 
-Flags: `--port 56469`, `--host 127.0.0.1` (pass `0.0.0.0` to expose on your network — put it behind a reverse proxy with websocket support), `--no-open`. Env: `PORT`, `HOST`, `JOHNNY_TOKEN`, `JOHNNY_CONFIG_DIR`, `JOHNNY_DEBUG` (also shows the agent adapter's stderr).
+### Signing in and running it somewhere else
+
+Any browser that reaches Johnny can drive an agent with shell access on that machine, so every request needs the access token. Three ways in:
+
+- Open the `?token=…` URL printed at startup (sets the cookie and drops the token from the address bar).
+- Go to `/login` and paste the token. `johnny token` prints it; `johnny token --rotate` replaces it and signs every browser out.
+- Set `JOHNNY_TOKEN` yourself (a systemd `Environment=`, a Docker env, a value from your password manager) instead of letting Johnny generate one.
+
+The cookie lasts 90 days, is `HttpOnly` and `SameSite=Lax`, and is marked `Secure` when the request arrived over HTTPS (directly or via `X-Forwarded-Proto` from a reverse proxy). Five wrong tokens from one address lock that address out of the login form for fifteen minutes.
+
+To host it behind a reverse proxy such as Nginx Proxy Manager: run with `--host 0.0.0.0` (or bind to the proxy's network), point the proxy at `http://<box>:56469`, and turn on websocket support. If the proxy already authenticates people (Authelia, Access Lists, Cloudflare Access), `--auth proxy` (or `JOHNNY_AUTH=proxy`) turns Johnny's own check off; it warns loudly at startup because nothing else stands in the way.
+
+Flags: `--port 56469`, `--host 127.0.0.1` (pass `0.0.0.0` to expose on your network — put it behind a reverse proxy with websocket support), `--auth token|proxy`, `--no-open`. Env: `PORT`, `HOST`, `JOHNNY_AUTH`, `JOHNNY_TOKEN`, `JOHNNY_CONFIG_DIR`, `JOHNNY_DEBUG` (also shows the agent adapter's stderr).
 
 ## Develop
 
