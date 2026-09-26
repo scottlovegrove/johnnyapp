@@ -99,6 +99,21 @@ export default function App() {
         setActiveId(session.id)
     }, [])
 
+    const importSessions = useCallback(async (agentId: string, projectId: string) => {
+        const added = await api<SessionInfo[]>('/api/sessions/import', {
+            method: 'POST',
+            body: JSON.stringify({ agentId, projectId }),
+        }).catch(() => null)
+        if (!added) return
+        setSessions((prev) => [...added.filter((a) => !prev.some((s) => s.id === a.id)), ...prev])
+    }, [])
+
+    const removeSession = useCallback(async (id: string) => {
+        await api(`/api/sessions/${id}`, { method: 'DELETE' }).catch(() => null)
+        setSessions((prev) => prev.filter((s) => s.id !== id))
+        setActiveId((current) => (current === id ? null : current))
+    }, [])
+
     const addProject = useCallback(async (path: string) => {
         const project = await api<Project>('/api/projects', {
             method: 'POST',
@@ -124,6 +139,8 @@ export default function App() {
                 activeId={activeId}
                 onSelect={setActiveId}
                 onCreateSession={createSession}
+                onImportSessions={importSessions}
+                onRemoveSession={removeSession}
                 onAddProject={addProject}
                 onRemoveProject={removeProject}
                 status={status}

@@ -1,6 +1,6 @@
 # AGENTS
 
-Guidance for anyone (human or agent) working in this repository.
+Guidance for anyone (human or agent) working in this repository. This file says _how to change things_; `CODEBASE.md` says _what is where_ — read it first instead of exploring, and update it when the structure shifts.
 
 ## Reference codebase
 
@@ -37,5 +37,7 @@ packages/
   server/   NestJS app (publishable as `johnny`); serves the built SPA from ./public
   web/      React SPA (Vite, Tailwind v4, shadcn-style components)
 ```
+
+Runtime state lives in `~/.config/johnny/` (`JOHNNY_CONFIG_DIR`): `token`, `projects.json`, `sessions.json`. Transcripts are not stored there; the agent is the source of truth and replays them over ACP.
 
 See `README.md` for how to run and develop.

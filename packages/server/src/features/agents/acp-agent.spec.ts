@@ -1,3 +1,5 @@
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { SessionUpdate } from '@agentclientprotocol/sdk'
 import { AcpAgent } from './acp-agent'
@@ -13,12 +15,24 @@ function textOf(updates: SessionUpdate[]): string {
 }
 
 describe('AcpAgent', () => {
+    let stateDir: string
     let agent: AcpAgent
     let updates: SessionUpdate[]
     let events: AgentEvents
     let closed: ReturnType<typeof vi.fn<(error?: unknown) => void>>
 
+    function newAgent() {
+        return new AcpAgent({
+            id: 'fake',
+            name: 'Fake',
+            command: process.execPath,
+            args: [FIXTURE],
+            env: { FAKE_ACP_STATE_DIR: stateDir },
+        })
+    }
+
     beforeEach(async () => {
+        stateDir = mkdtempSync(join(tmpdir(), 'fake-acp-state-'))
         updates = []
         closed = vi.fn<(error?: unknown) => void>()
         events = {
@@ -28,17 +42,21 @@ describe('AcpAgent', () => {
             permission: vi.fn(async () => 'yes'),
             closed,
         }
-        agent = new AcpAgent({
-            id: 'fake',
-            name: 'Fake',
-            command: process.execPath,
-            args: [FIXTURE],
-        })
+        agent = newAgent()
         await agent.start(events)
     })
 
     afterEach(() => {
         agent.stop()
+        rmSync(stateDir, { recursive: true, force: true })
+    })
+
+    it('reads capabilities from the handshake', () => {
+        expect(agent.capabilities).toEqual({
+            loadSession: true,
+            resumeSession: true,
+            listSessions: true,
+        })
     })
 
     it('creates a session and streams a prompt turn to the event sink', async () => {
@@ -82,5 +100,33 @@ describe('AcpAgent', () => {
         const sessionId = await agent.newSession('/tmp')
         await expect(agent.prompt(sessionId, 'exit')).rejects.toThrow()
         await vi.waitFor(() => expect(closed).toHaveBeenCalled())
+    })
+
+    it('lists earlier sessions and replays one into a fresh process', async () => {
+        const sessionId = await agent.newSession('/tmp/proj')
+        await agent.prompt(sessionId, 'hello')
+        agent.stop()
+
+        // A brand-new adapter process, as after Johnny restarts.
+        agent = newAgent()
+        updates = []
+        await agent.start(events)
+
+        const listed = await agent.listSessions('/tmp/proj')
+        expect(listed).toEqual([
+            expect.objectContaining({ id: sessionId, cwd: '/tmp/proj', title: 'hello' }),
+        ])
+        expect(await agent.listSessions('/elsewhere')).toEqual([])
+
+        await agent.loadSession(sessionId, '/tmp/proj')
+        expect(updates.map((u) => u.sessionUpdate)).toEqual([
+            'user_message_chunk',
+            'agent_message_chunk',
+            'tool_call',
+        ])
+        expect(textOf(updates)).toBe('echo: hello')
+
+        await expect(agent.resumeSession(sessionId, '/tmp/proj')).resolves.toBeUndefined()
+        await expect(agent.resumeSession('missing', '/tmp/proj')).rejects.toThrow()
     })
 })
