@@ -334,11 +334,17 @@ describe('SessionManagerService', () => {
             expect(service.get(info.id)?.title).not.toBe('already here')
         })
 
-        it('remove forgets the session everywhere', () => {
+        it('remove forgets the session everywhere and keeps it out of imports', async () => {
             expect(service.remove(info.id)).toBe(true)
             expect(service.get(info.id)).toBeUndefined()
             expect(new SessionStoreService().get(info.id)).toBeUndefined()
             expect(service.remove(info.id)).toBe(false)
+
+            adapter.known = [
+                { id: info.id, cwd: project.path, title: 'still in agent', updatedAt: null },
+            ]
+            expect(await service.importFromAgent('fake', project)).toEqual([])
+            expect(service.list()).toEqual([])
         })
     })
 })

@@ -99,13 +99,14 @@ export class SessionManagerService {
 
     /**
      * Pull in sessions the agent already has for a project (started from its
-     * own CLI, or from Johnny before its index existed). Returns the new ones.
+     * own CLI, or from Johnny before its index existed). Sessions the user has
+     * removed stay out. Returns the new ones.
      */
     async importFromAgent(agentId: string, project: Project): Promise<SessionInfo[]> {
         const adapter = await this.adapter(agentId)
         const added: SessionInfo[] = []
         for (const summary of await adapter.listSessions(project.path)) {
-            if (this.sessions.has(summary.id)) continue
+            if (this.sessions.has(summary.id) || this.store.isIgnored(summary.id)) continue
             const at = summary.updatedAt ?? now()
             const info: SessionInfo = {
                 id: summary.id,
