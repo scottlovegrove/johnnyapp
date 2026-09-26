@@ -1,5 +1,13 @@
 import { useEffect, useState } from 'react'
-import { ChevronDown, ChevronRight, FolderPlus, Plus, Trash2 } from 'lucide-react'
+import {
+    ChevronDown,
+    ChevronRight,
+    FolderInput,
+    FolderPlus,
+    Plus,
+    Terminal,
+    Trash2,
+} from 'lucide-react'
 import type { AgentInfo, Project, SessionInfo } from '@johnny/shared'
 import { Button } from './ui/button'
 import { cn } from '@/lib/utils'
@@ -14,6 +22,8 @@ interface Props {
     status: 'connecting' | 'open' | 'closed'
     onSelect(id: string): void
     onCreateSession(agentId: string, projectId: string): Promise<void>
+    onImportSessions(agentId: string, projectId: string): Promise<void>
+    onRemoveSession(id: string): Promise<void>
     onAddProject(path: string): Promise<void>
     onRemoveProject(id: string): Promise<void>
 }
@@ -26,6 +36,8 @@ export function Sidebar({
     status,
     onSelect,
     onCreateSession,
+    onImportSessions,
+    onRemoveSession,
     onAddProject,
     onRemoveProject,
 }: Props) {
@@ -110,7 +122,9 @@ export function Sidebar({
                     </p>
                 )}
                 {projects.map((p) => {
-                    const own = sessions.filter((s) => s.projectId === p.id)
+                    const own = sessions
+                        .filter((s) => s.projectId === p.id)
+                        .sort((a, b) => b.lastActiveAt.localeCompare(a.lastActiveAt))
                     const isCollapsed = !!collapsed[p.id]
                     const Chevron = isCollapsed ? ChevronRight : ChevronDown
                     return (
@@ -155,6 +169,16 @@ export function Sidebar({
                                     size="icon"
                                     variant="ghost"
                                     className="size-7 opacity-0 group-hover:opacity-100"
+                                    title="Import sessions from agent"
+                                    disabled={!selectedAgent}
+                                    onClick={() => void onImportSessions(selectedAgent, p.id)}
+                                >
+                                    <FolderInput />
+                                </Button>
+                                <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="size-7 opacity-0 group-hover:opacity-100"
                                     title="Remove project"
                                     onClick={() => void onRemoveProject(p.id)}
                                 >
@@ -163,19 +187,39 @@ export function Sidebar({
                             </div>
                             {!isCollapsed &&
                                 own.map((s) => (
-                                    <button
+                                    <div
                                         key={s.id}
-                                        onClick={() => onSelect(s.id)}
                                         className={cn(
-                                            'mb-0.5 flex w-full items-center justify-between rounded-md px-2 py-1 pl-6 text-left text-sm hover:bg-accent',
+                                            'group/session mb-0.5 flex items-center rounded-md pl-4 pr-1 hover:bg-accent',
                                             s.id === activeId && 'bg-accent',
                                         )}
                                     >
-                                        <span className="truncate">{s.title}</span>
-                                        {s.busy && (
-                                            <span className="size-1.5 shrink-0 animate-pulse rounded-full bg-emerald-500" />
-                                        )}
-                                    </button>
+                                        <button
+                                            onClick={() => onSelect(s.id)}
+                                            className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1 text-left text-sm"
+                                            title={s.title}
+                                        >
+                                            {s.origin === 'agent' && (
+                                                <Terminal
+                                                    className="size-3 shrink-0 text-muted-foreground"
+                                                    aria-label="Started outside Johnny"
+                                                />
+                                            )}
+                                            <span className="truncate">{s.title}</span>
+                                            {s.busy && (
+                                                <span className="ml-auto size-1.5 shrink-0 animate-pulse rounded-full bg-emerald-500" />
+                                            )}
+                                        </button>
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="size-6 opacity-0 group-hover/session:opacity-100"
+                                            title="Remove session"
+                                            onClick={() => void onRemoveSession(s.id)}
+                                        >
+                                            <Trash2 className="size-3" />
+                                        </Button>
+                                    </div>
                                 ))}
                         </section>
                     )

@@ -12,6 +12,8 @@ npm run build
 npm start            # http://127.0.0.1:56469/?token=…
 ```
 
+Sessions persist across restarts. Johnny keeps an index in `~/.config/johnny/sessions.json`; the transcript itself lives with the agent (Claude Code stores it under `~/.claude/projects/`) and is replayed through ACP `session/load` when you reopen a session, so follow-up prompts keep their context. Each project also has an import action that lists the agent's own sessions for that directory, including ones started from the terminal.
+
 On first start a token is generated and stored in `~/.config/johnny/token`. The printed URL includes it and sets a cookie; every request without that cookie is rejected. Anyone who can reach the server can run shell commands on your machine through the agent, so keep the token private.
 
 Flags: `--port 56469`, `--host 127.0.0.1` (pass `0.0.0.0` to expose on your network — put it behind a reverse proxy with websocket support), `--no-open`. Env: `PORT`, `HOST`, `JOHNNY_TOKEN`, `JOHNNY_CONFIG_DIR`, `JOHNNY_DEBUG` (also shows the agent adapter's stderr).

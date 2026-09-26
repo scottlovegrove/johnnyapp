@@ -31,6 +31,10 @@ export interface SessionInfo {
     cwd: string
     title: string
     createdAt: string
+    /** Last time a prompt was sent, or the agent's own timestamp for imported sessions. */
+    lastActiveAt: string
+    /** Whether the session was started from Johnny or picked up from the agent's own history. */
+    origin: 'johnny' | 'agent'
     /** True while a prompt turn is in flight. */
     busy: boolean
 }

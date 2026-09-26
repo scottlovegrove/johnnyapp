@@ -10,7 +10,13 @@ import {
     type StopReason,
 } from '@agentclientprotocol/sdk'
 import { Logger } from '@nestjs/common'
-import type { AcpAgentSpec, AgentAdapter, AgentEvents } from './agent.types'
+import type {
+    AcpAgentSpec,
+    AgentAdapter,
+    AgentCapabilities,
+    AgentEvents,
+    AgentSessionSummary,
+} from './agent.types'
 
 /**
  * Drives any agent that speaks ACP over stdio. One child process per adapter;
@@ -19,6 +25,11 @@ import type { AcpAgentSpec, AgentAdapter, AgentEvents } from './agent.types'
 export class AcpAgent implements AgentAdapter {
     readonly id: string
     readonly name: string
+    capabilities: AgentCapabilities = {
+        loadSession: false,
+        resumeSession: false,
+        listSessions: false,
+    }
 
     private readonly logger: Logger
     private readonly spec: AcpAgentSpec
@@ -82,7 +93,20 @@ export class AcpAgent implements AgentAdapter {
             protocolVersion: PROTOCOL_VERSION,
             clientCapabilities: { fs: { readTextFile: false, writeTextFile: false } },
         })
-        this.logger.log(`connected, protocol v${init.protocolVersion}`)
+        // `resume` is newer than the SDK's SessionCapabilities type, so read the
+        // block loosely.
+        const sessionCaps = (init.agentCapabilities?.sessionCapabilities ?? {}) as Record<
+            string,
+            unknown
+        >
+        this.capabilities = {
+            loadSession: init.agentCapabilities?.loadSession === true,
+            resumeSession: sessionCaps.resume != null,
+            listSessions: sessionCaps.list != null,
+        }
+        this.logger.log(
+            `connected, protocol v${init.protocolVersion}, capabilities ${JSON.stringify(this.capabilities)}`,
+        )
     }
 
     private get agent(): ClientContext {
@@ -90,9 +114,36 @@ export class AcpAgent implements AgentAdapter {
         return this.conn.agent
     }
 
+    private require(capability: keyof AgentCapabilities): void {
+        if (!this.capabilities[capability]) {
+            throw new Error(`${this.name} does not support ${capability}`)
+        }
+    }
+
     async newSession(cwd: string): Promise<string> {
         const res = await this.agent.request(methods.agent.session.new, { cwd, mcpServers: [] })
         return res.sessionId
+    }
+
+    async loadSession(sessionId: string, cwd: string): Promise<void> {
+        this.require('loadSession')
+        await this.agent.request(methods.agent.session.load, { sessionId, cwd, mcpServers: [] })
+    }
+
+    async resumeSession(sessionId: string, cwd: string): Promise<void> {
+        this.require('resumeSession')
+        await this.agent.request(methods.agent.session.resume, { sessionId, cwd })
+    }
+
+    async listSessions(cwd: string): Promise<AgentSessionSummary[]> {
+        this.require('listSessions')
+        const res = await this.agent.request(methods.agent.session.list, { cwd })
+        return res.sessions.map((s) => ({
+            id: s.sessionId,
+            cwd: s.cwd,
+            title: s.title ?? null,
+            updatedAt: s.updatedAt ?? null,
+        }))
     }
 
     async prompt(sessionId: string, text: string): Promise<StopReason> {

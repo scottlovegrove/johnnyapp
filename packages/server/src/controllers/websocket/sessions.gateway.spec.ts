@@ -10,7 +10,12 @@ import request from 'supertest'
 import { WebSocket } from 'ws'
 import { AppModule } from '../../app/app.module'
 import { AgentRegistryService } from '../../features/agents/agent-registry.service'
-import type { AgentAdapter, AgentEvents } from '../../features/agents/agent.types'
+import type {
+    AgentAdapter,
+    AgentCapabilities,
+    AgentEvents,
+    AgentSessionSummary,
+} from '../../features/agents/agent.types'
 import { TokenService } from '../../infrastructure/token/token.service'
 
 /**
@@ -21,8 +26,10 @@ import { TokenService } from '../../infrastructure/token/token.service'
 class FakeAdapter implements AgentAdapter {
     readonly id = 'fake'
     readonly name = 'Fake'
+    capabilities: AgentCapabilities = { loadSession: true, resumeSession: true, listSessions: true }
     events!: AgentEvents
     onPrompt: (sessionId: string, text: string) => Promise<StopReason> = async () => 'end_turn'
+    known: AgentSessionSummary[] = []
     private counter = 0
 
     async start(events: AgentEvents) {
@@ -33,6 +40,11 @@ class FakeAdapter implements AgentAdapter {
     }
     prompt(sessionId: string, text: string) {
         return this.onPrompt(sessionId, text)
+    }
+    async loadSession() {}
+    async resumeSession() {}
+    async listSessions() {
+        return this.known
     }
     async cancel() {}
     stop() {}
@@ -151,6 +163,34 @@ describe('SessionsGateway (integration)', () => {
             .send({ agentId: 'fake' })
             .expect(400)
         expect(res.body.errors[0].path).toEqual(['projectId'])
+    })
+
+    it("imports the agent's sessions for a project and lists them afterwards", async () => {
+        const project = await request(baseUrl)
+            .post('/api/projects')
+            .set('cookie', cookie)
+            .send({ path: projectDir })
+            .expect(201)
+        adapter.known = [
+            { id: 'cli-1', cwd: projectDir, title: 'From the terminal', updatedAt: null },
+        ]
+
+        const imported = await request(baseUrl)
+            .post('/api/sessions/import')
+            .set('cookie', cookie)
+            .send({ agentId: 'fake', projectId: project.body.id })
+            .expect(201)
+        expect(imported.body).toEqual([
+            expect.objectContaining({ id: 'cli-1', title: 'From the terminal', origin: 'agent' }),
+        ])
+
+        const listed = await request(baseUrl).get('/api/sessions').set('cookie', cookie).expect(200)
+        expect(listed.body).toEqual(
+            expect.arrayContaining([expect.objectContaining({ id: 'cli-1' })]),
+        )
+
+        await request(baseUrl).delete('/api/sessions/cli-1').set('cookie', cookie).expect(204)
+        await request(baseUrl).delete('/api/sessions/cli-1').set('cookie', cookie).expect(404)
     })
 
     it('closes websocket connections that do not carry the token cookie', async () => {
