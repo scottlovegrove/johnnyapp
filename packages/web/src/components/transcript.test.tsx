@@ -77,6 +77,27 @@ describe('Transcript', () => {
         expect(screen.getByText('npm test')).toBeInTheDocument()
     })
 
+    it('drops the context Claude Code injects into user turns', () => {
+        const items: TranscriptItem[] = [
+            {
+                kind: 'user',
+                id: 'u1',
+                at: '',
+                text: '<ide_opened_file>The user opened the file /x/y.ts in the IDE. This may or may not be related to the current task.</ide_opened_file>i need the new url',
+            },
+            {
+                kind: 'user',
+                id: 'u2',
+                at: '',
+                text: '<system-reminder>\nSome reminder\n</system-reminder>\n<command-name>/model</command-name>',
+            },
+        ]
+        render(<Transcript items={items} busy={false} />)
+        expect(screen.getByText('i need the new url')).toBeInTheDocument()
+        expect(screen.queryByText(/opened the file/)).not.toBeInTheDocument()
+        expect(screen.queryByText(/reminder/)).not.toBeInTheDocument()
+    })
+
     it('renders user messages, errors and non-normal turn ends', () => {
         const items: TranscriptItem[] = [
             { kind: 'user', id: 'u', text: 'do it', at: '' },

@@ -61,6 +61,18 @@ function toolDetail(u: ToolCall | ToolCallUpdate): string | null {
     return null
 }
 
+/**
+ * Claude Code wraps context it injects into a user turn (the file open in the
+ * IDE, system reminders, slash-command plumbing) in tags. Those are for the
+ * model, not the reader, so they are dropped from user bubbles.
+ */
+const INJECTED_CONTEXT =
+    /<(ide_opened_file|ide_selection|system-reminder|local-command-caveat|local-command-stdout|command-name|command-message|command-args)>[\s\S]*?<\/\1>\s*/g
+
+export function cleanUserText(text: string): string {
+    return text.replace(INJECTED_CONTEXT, '').trim()
+}
+
 function buildBlocks(items: TranscriptItem[]): Block[] {
     const blocks: Block[] = []
     const tools = new Map<string, ToolBlock>()
@@ -95,7 +107,8 @@ function buildBlocks(items: TranscriptItem[]): Block[] {
 
     for (const item of items) {
         if (item.kind === 'user') {
-            blocks.push({ kind: 'user', id: item.id, text: item.text })
+            const text = cleanUserText(item.text)
+            if (text) blocks.push({ kind: 'user', id: item.id, text })
             continue
         }
         if (item.kind === 'turn_end') {
