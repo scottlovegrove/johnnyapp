@@ -9,13 +9,24 @@
     "dev": "concurrently -n server,web -c blue,magenta \"npm run dev -w packages/server\" \"npm run dev -w packages/web\"",
     "build": "npm run build -w packages/shared && npm run build -w packages/web && npm run build -w packages/server",
     "start": "node packages/server/dist/index.js",
-    "typecheck": "tsc -b packages/shared packages/server packages/web"
+    "type-check": "tsc -b packages/shared packages/server packages/web",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint . --fix",
+    "format": "oxfmt --check",
+    "format:fix": "oxfmt",
+    "check": "oxfmt --check && oxlint .",
+    "check:fix": "oxfmt && oxlint . --fix",
+    "prepare": "husky"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22 <25",
+    "npm": ">=10"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1",
-    "typescript": "^5.9.3"
+    "concurrently": "9.2.4",
+    "husky": "9.1.7",
+    "oxfmt": "0.68.0",
+    "oxlint": "1.83.0",
+    "typescript": "5.9.3"
   }
 }

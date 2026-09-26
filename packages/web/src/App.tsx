@@ -1,151 +1,176 @@
-import { useCallback, useEffect, useState } from "react";
-import type { AgentInfo, PermissionRequest, Project, SessionInfo, TranscriptItem } from "@johnny/shared";
-import { Composer } from "./components/Composer";
-import { PermissionBar } from "./components/PermissionBar";
-import { Sidebar } from "./components/Sidebar";
-import { Transcript } from "./components/Transcript";
-import { socket, useSocket, useSocketStatus } from "./lib/ws";
+import { useCallback, useEffect, useState } from 'react'
+import type {
+    AgentInfo,
+    PermissionRequest,
+    Project,
+    SessionInfo,
+    TranscriptItem,
+} from '@johnny/shared'
+import { Composer } from './components/Composer'
+import { PermissionBar } from './components/PermissionBar'
+import { Sidebar } from './components/Sidebar'
+import { Transcript } from './components/Transcript'
+import { socket, useSocket, useSocketStatus } from './lib/ws'
 
 export default function App() {
-  const [agents, setAgents] = useState<AgentInfo[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [sessions, setSessions] = useState<SessionInfo[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [transcript, setTranscript] = useState<TranscriptItem[]>([]);
-  const [pending, setPending] = useState<PermissionRequest | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const status = useSocketStatus();
+    const [agents, setAgents] = useState<AgentInfo[]>([])
+    const [projects, setProjects] = useState<Project[]>([])
+    const [sessions, setSessions] = useState<SessionInfo[]>([])
+    const [activeId, setActiveId] = useState<string | null>(null)
+    const [transcript, setTranscript] = useState<TranscriptItem[]>([])
+    const [pending, setPending] = useState<PermissionRequest | null>(null)
+    const [error, setError] = useState<string | null>(null)
+    const status = useSocketStatus()
 
-  useEffect(() => {
-    fetch("/api/agents").then((r) => r.json()).then(setAgents);
-    fetch("/api/projects").then((r) => r.json()).then(setProjects);
-    fetch("/api/sessions").then((r) => r.json()).then(setSessions);
-  }, []);
+    useEffect(() => {
+        fetch('/api/agents')
+            .then((r) => r.json())
+            .then(setAgents)
+        fetch('/api/projects')
+            .then((r) => r.json())
+            .then(setProjects)
+        fetch('/api/sessions')
+            .then((r) => r.json())
+            .then(setSessions)
+    }, [])
 
-  useEffect(() => {
-    if (!activeId) return;
-    setTranscript([]);
-    setPending(null);
-    socket.send({ type: "subscribe", sessionId: activeId });
-  }, [activeId]);
+    useEffect(() => {
+        if (!activeId) return
+        setTranscript([])
+        setPending(null)
+        socket.send({ type: 'subscribe', sessionId: activeId })
+    }, [activeId])
 
-  useSocket((msg) => {
-    switch (msg.type) {
-      case "session":
-        setSessions((prev) => {
-          const i = prev.findIndex((s) => s.id === msg.session.id);
-          if (i === -1) return [msg.session, ...prev];
-          const next = [...prev];
-          next[i] = msg.session;
-          return next;
-        });
-        break;
-      case "transcript":
-        if (msg.sessionId !== activeId) return;
-        setTranscript(msg.items);
-        setPending(msg.pending);
-        break;
-      case "item":
-        if (msg.sessionId !== activeId) return;
-        setTranscript((prev) => [...prev, msg.item]);
-        break;
-      case "permission_request":
-        if (msg.request.sessionId === activeId) setPending(msg.request);
-        break;
-      case "permission_resolved":
-        setPending((p) => (p?.requestId === msg.requestId ? null : p));
-        break;
-      case "error":
-        setError(msg.message);
-        break;
+    useSocket((msg) => {
+        switch (msg.type) {
+            case 'session':
+                setSessions((prev) => {
+                    const i = prev.findIndex((s) => s.id === msg.session.id)
+                    if (i === -1) return [msg.session, ...prev]
+                    const next = [...prev]
+                    next[i] = msg.session
+                    return next
+                })
+                break
+            case 'transcript':
+                if (msg.sessionId !== activeId) return
+                setTranscript(msg.items)
+                setPending(msg.pending)
+                break
+            case 'item':
+                if (msg.sessionId !== activeId) return
+                setTranscript((prev) => [...prev, msg.item])
+                break
+            case 'permission_request':
+                if (msg.request.sessionId === activeId) setPending(msg.request)
+                break
+            case 'permission_resolved':
+                setPending((p) => (p?.requestId === msg.requestId ? null : p))
+                break
+            case 'error':
+                setError(msg.message)
+                break
+        }
+    })
+
+    async function api<T>(path: string, init?: RequestInit): Promise<T | null> {
+        setError(null)
+        const res = await fetch(path, { headers: { 'content-type': 'application/json' }, ...init })
+        if (res.status === 204) return null
+        const body = (await res.json()) as T | { error: string }
+        if (!res.ok || (body && typeof body === 'object' && 'error' in body)) {
+            setError(
+                body && typeof body === 'object' && 'error' in body
+                    ? body.error
+                    : `HTTP ${res.status}`,
+            )
+            throw new Error('request failed')
+        }
+        return body as T
     }
-  });
 
-  async function api<T>(path: string, init?: RequestInit): Promise<T | null> {
-    setError(null);
-    const res = await fetch(path, { headers: { "content-type": "application/json" }, ...init });
-    if (res.status === 204) return null;
-    const body = (await res.json()) as T | { error: string };
-    if (!res.ok || (body && typeof body === "object" && "error" in body)) {
-      setError(body && typeof body === "object" && "error" in body ? body.error : `HTTP ${res.status}`);
-      throw new Error("request failed");
-    }
-    return body as T;
-  }
+    const createSession = useCallback(async (agentId: string, projectId: string) => {
+        const session = await api<SessionInfo>('/api/sessions', {
+            method: 'POST',
+            body: JSON.stringify({ agentId, projectId }),
+        }).catch(() => null)
+        if (!session) return
+        setSessions((prev) => (prev.some((s) => s.id === session.id) ? prev : [session, ...prev]))
+        setActiveId(session.id)
+    }, [])
 
-  const createSession = useCallback(async (agentId: string, projectId: string) => {
-    const session = await api<SessionInfo>("/api/sessions", {
-      method: "POST",
-      body: JSON.stringify({ agentId, projectId }),
-    }).catch(() => null);
-    if (!session) return;
-    setSessions((prev) => (prev.some((s) => s.id === session.id) ? prev : [session, ...prev]));
-    setActiveId(session.id);
-  }, []);
+    const addProject = useCallback(async (path: string) => {
+        const project = await api<Project>('/api/projects', {
+            method: 'POST',
+            body: JSON.stringify({ path }),
+        }).catch(() => null)
+        if (!project) throw new Error('add failed')
+        setProjects((prev) => (prev.some((p) => p.id === project.id) ? prev : [...prev, project]))
+    }, [])
 
-  const addProject = useCallback(async (path: string) => {
-    const project = await api<Project>("/api/projects", { method: "POST", body: JSON.stringify({ path }) }).catch(
-      () => null,
-    );
-    if (!project) throw new Error("add failed");
-    setProjects((prev) => (prev.some((p) => p.id === project.id) ? prev : [...prev, project]));
-  }, []);
+    const removeProject = useCallback(async (id: string) => {
+        await api(`/api/projects/${id}`, { method: 'DELETE' }).catch(() => null)
+        setProjects((prev) => prev.filter((p) => p.id !== id))
+    }, [])
 
-  const removeProject = useCallback(async (id: string) => {
-    await api(`/api/projects/${id}`, { method: "DELETE" }).catch(() => null);
-    setProjects((prev) => prev.filter((p) => p.id !== id));
-  }, []);
+    const active = sessions.find((s) => s.id === activeId) ?? null
 
-  const active = sessions.find((s) => s.id === activeId) ?? null;
-
-  return (
-    <div className="flex h-screen">
-      <Sidebar
-        agents={agents}
-        projects={projects}
-        sessions={sessions}
-        activeId={activeId}
-        onSelect={setActiveId}
-        onCreateSession={createSession}
-        onAddProject={addProject}
-        onRemoveProject={removeProject}
-        status={status}
-      />
-      <main className="flex min-w-0 flex-1 flex-col">
-        {error && (
-          <div className="flex items-center justify-between border-b border-destructive/40 bg-destructive/10 px-4 py-2 text-sm text-destructive">
-            <span>{error}</span>
-            <button className="underline" onClick={() => setError(null)}>
-              dismiss
-            </button>
-          </div>
-        )}
-        {active ? (
-          <>
-            <header className="border-b px-4 py-2 text-sm">
-              <span className="font-medium">{active.title}</span>
-              <span className="ml-2 text-muted-foreground">{active.cwd}</span>
-              <span className="ml-2 text-muted-foreground">· {active.agentId}</span>
-            </header>
-            <Transcript items={transcript} busy={active.busy} />
-            {pending && (
-              <PermissionBar
-                request={pending}
-                onChoose={(optionId) => socket.send({ type: "permission", requestId: pending.requestId, optionId })}
-              />
-            )}
-            <Composer
-              busy={active.busy}
-              onSend={(text) => socket.send({ type: "prompt", sessionId: active.id, text })}
-              onCancel={() => socket.send({ type: "cancel", sessionId: active.id })}
+    return (
+        <div className="flex h-screen">
+            <Sidebar
+                agents={agents}
+                projects={projects}
+                sessions={sessions}
+                activeId={activeId}
+                onSelect={setActiveId}
+                onCreateSession={createSession}
+                onAddProject={addProject}
+                onRemoveProject={removeProject}
+                status={status}
             />
-          </>
-        ) : (
-          <div className="flex flex-1 items-center justify-center text-muted-foreground">
-            Add a project, then start a session from it.
-          </div>
-        )}
-      </main>
-    </div>
-  );
+            <main className="flex min-w-0 flex-1 flex-col">
+                {error && (
+                    <div className="flex items-center justify-between border-b border-destructive/40 bg-destructive/10 px-4 py-2 text-sm text-destructive">
+                        <span>{error}</span>
+                        <button className="underline" onClick={() => setError(null)}>
+                            dismiss
+                        </button>
+                    </div>
+                )}
+                {active ? (
+                    <>
+                        <header className="border-b px-4 py-2 text-sm">
+                            <span className="font-medium">{active.title}</span>
+                            <span className="ml-2 text-muted-foreground">{active.cwd}</span>
+                            <span className="ml-2 text-muted-foreground">· {active.agentId}</span>
+                        </header>
+                        <Transcript items={transcript} busy={active.busy} />
+                        {pending && (
+                            <PermissionBar
+                                request={pending}
+                                onChoose={(optionId) =>
+                                    socket.send({
+                                        type: 'permission',
+                                        requestId: pending.requestId,
+                                        optionId,
+                                    })
+                                }
+                            />
+                        )}
+                        <Composer
+                            busy={active.busy}
+                            onSend={(text) =>
+                                socket.send({ type: 'prompt', sessionId: active.id, text })
+                            }
+                            onCancel={() => socket.send({ type: 'cancel', sessionId: active.id })}
+                        />
+                    </>
+                ) : (
+                    <div className="flex flex-1 items-center justify-center text-muted-foreground">
+                        Add a project, then start a session from it.
+                    </div>
+                )}
+            </main>
+        </div>
+    )
 }

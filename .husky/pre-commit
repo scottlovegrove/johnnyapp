@@ -1,0 +1,7 @@
+# Stash unstaged changes so only what's being committed is checked
+if ! git diff --quiet; then
+    git stash push --keep-index -m "pre-commit:unstaged" && trap 'git stash pop' EXIT
+fi
+
+npm run type-check
+npm run check:fix && git add -u

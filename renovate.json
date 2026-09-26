@@ -1,0 +1,43 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": [
+        "config:js-app",
+        "group:linters",
+        "group:monorepos",
+        "group:recommended",
+        "schedule:weekdays",
+        ":automergeMinor",
+        ":automergePr",
+        ":automergeRequireAllStatusChecks",
+        ":enableVulnerabilityAlertsWithLabel(security)",
+        ":label(dependencies)"
+    ],
+    "enabledManagers": ["npm"],
+    "minimumReleaseAge": "5 days",
+    "postUpdateOptions": ["npmDedupe"],
+    "packageRules": [
+        {
+            "matchManagers": ["github-actions"],
+            "enabled": false
+        },
+        {
+            "matchPackageNames": ["@types/react", "@types/react-dom"],
+            "groupName": "react monorepo"
+        },
+        {
+            "matchPackageNames": ["oxlint", "oxfmt"],
+            "groupName": "ox toolchain",
+            "description": "Group oxlint and oxfmt updates into a single PR"
+        },
+        {
+            "matchPackageNames": ["hono", "@hono/**"],
+            "groupName": "hono",
+            "description": "Update hono and its adapters together"
+        },
+        {
+            "matchPackageNames": ["@agentclientprotocol/sdk", "@zed-industries/claude-code-acp"],
+            "groupName": "ACP",
+            "description": "The Claude Code ACP adapter depends on the ACP SDK; bump them together so the protocol versions stay aligned"
+        }
+    ]
+}

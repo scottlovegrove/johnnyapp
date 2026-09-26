@@ -24,6 +24,20 @@ npm run dev          # server on :56469 (tsx watch) + Vite on :5173 with /api an
 
 Open `http://localhost:5173/?token=<token>` once so the cookie is set (the Vite proxy forwards it). Set `JOHNNY_DEV=1` to stop the server opening a browser tab.
 
+## Tooling
+
+Formatting and linting use [oxfmt](https://oxc.rs/docs/guide/usage/formatter) and [oxlint](https://oxc.rs/docs/guide/usage/linter):
+
+```sh
+npm run check        # oxfmt --check && oxlint .
+npm run check:fix    # format and auto-fix
+npm run type-check
+```
+
+A husky pre-commit hook runs `type-check` and `check:fix` against the staged files. CI (`.github/workflows/ci.yml`) runs format, lint, type-check and build on every push to `main` and every pull request.
+
+Dependencies are pinned to exact versions (`save-exact=true` in `.npmrc`) and kept current by Renovate (`renovate.json`), which groups related packages and automerges minor/patch bumps once CI passes.
+
 ## Layout
 
 ```
