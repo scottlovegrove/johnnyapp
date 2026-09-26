@@ -5,6 +5,7 @@ import { APP_PIPE } from '@nestjs/core'
 import { ServeStaticModule } from '@nestjs/serve-static'
 import { ZodValidationPipe } from 'nestjs-zod'
 import { AgentsControllerModule } from '../controllers/agents/agents.module'
+import { AuthControllerModule } from '../controllers/auth/auth.module'
 import { PingModule } from '../controllers/ping/ping.module'
 import { ProjectsControllerModule } from '../controllers/projects/projects.module'
 import { SessionsControllerModule } from '../controllers/sessions/sessions.module'
@@ -27,7 +28,7 @@ const publicDir = [
             ? [
                   ServeStaticModule.forRoot({
                       rootPath: publicDir,
-                      exclude: ['/api/{*path}', '/ws'],
+                      exclude: ['/api/{*path}', '/ws', '/login', '/logout'],
                   }),
               ]
             : []),
@@ -39,6 +40,7 @@ const publicDir = [
 
         // Controllers
         AgentsControllerModule,
+        AuthControllerModule,
         PingModule,
         ProjectsControllerModule,
         SessionsControllerModule,
@@ -53,6 +55,6 @@ const publicDir = [
 })
 export class AppModule implements NestModule {
     configure(consumer: MiddlewareConsumer) {
-        consumer.apply(AuthMiddleware).exclude('api/ping').forRoutes('*')
+        consumer.apply(AuthMiddleware).exclude('api/ping', 'login', 'logout').forRoutes('*')
     }
 }

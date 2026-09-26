@@ -9,7 +9,7 @@ class FakeWebSocket {
     sent: string[] = []
     onopen: (() => void) | null = null
     onmessage: ((evt: { data: string }) => void) | null = null
-    onclose: (() => void) | null = null
+    onclose: ((evt: { code: number }) => void) | null = null
 
     constructor(readonly url: string) {
         FakeWebSocket.instances.push(this)
@@ -28,9 +28,9 @@ class FakeWebSocket {
         this.onmessage?.({ data: JSON.stringify(msg) })
     }
 
-    drop() {
+    drop(code = 1006) {
         this.readyState = 3
-        this.onclose?.()
+        this.onclose?.({ code })
     }
 }
 
@@ -76,6 +76,21 @@ describe('socket', () => {
         off()
         ws?.receive({ type: 'permission_resolved', requestId: 'r2' })
         expect(listener).toHaveBeenCalledTimes(1)
+    })
+
+    it('sends the browser to the login page when the server refuses the cookie', async () => {
+        const assign = vi.fn()
+        vi.stubGlobal('location', { ...location, pathname: '/sessions/abc', search: '', assign })
+        const { socket } = await loadModule()
+        const [ws] = FakeWebSocket.instances
+        ws?.open()
+
+        ws?.drop(1008)
+
+        expect(assign).toHaveBeenCalledWith('/login?next=%2Fsessions%2Fabc')
+        await vi.advanceTimersByTimeAsync(2000)
+        expect(FakeWebSocket.instances).toHaveLength(1)
+        expect(socket.status).toBe('open')
     })
 
     it('reconnects with backoff after the connection drops', async () => {

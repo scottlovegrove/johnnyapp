@@ -156,6 +156,51 @@ describe('SessionsGateway (integration)', () => {
         await request(baseUrl).get('/api/agents').set('cookie', cookie).expect(200)
     })
 
+    it('signs a browser in through the login page and sends it back where it was going', async () => {
+        const token = app.get(TokenService).token
+
+        // No cookie: a page navigation is sent to the login form, an API call gets 401.
+        await request(baseUrl)
+            .get('/sessions/abc')
+            .set('accept', 'text/html')
+            .expect(302)
+            .expect('location', '/login?next=%2Fsessions%2Fabc')
+        const page = await request(baseUrl).get('/login?next=%2Fsessions%2Fabc').expect(200)
+        expect(page.text).toContain('<form method="post" action="/login">')
+        expect(page.text).toContain('value="/sessions/abc"')
+
+        // Wrong token: back to the form with an error, no cookie.
+        const wrong = await request(baseUrl)
+            .post('/login')
+            .type('form')
+            .send({ token: 'nope', next: '/sessions/abc' })
+            .expect(303)
+        expect(wrong.headers.location).toMatch(/^\/login\?next=%2Fsessions%2Fabc&error=/)
+        expect(wrong.headers['set-cookie']).toBeUndefined()
+
+        // Right token: cookie set, off to the original page. Off-site `next` is ignored.
+        const ok = await request(baseUrl)
+            .post('/login')
+            .type('form')
+            .set('x-forwarded-proto', 'https')
+            .send({ token, next: '/sessions/abc' })
+            .expect(303)
+            .expect('location', '/sessions/abc')
+        const setCookie = String(ok.headers['set-cookie'])
+        expect(setCookie).toContain(`johnny_token=${token}`)
+        expect(setCookie).toMatch(/Max-Age=7776000/)
+        expect(setCookie).toMatch(/HttpOnly/)
+        expect(setCookie).toMatch(/Secure/)
+        await request(baseUrl)
+            .post('/login')
+            .type('form')
+            .send({ token, next: 'https://evil.example/' })
+            .expect(303)
+            .expect('location', '/')
+
+        await request(baseUrl).post('/logout').expect(303).expect('location', '/login')
+    })
+
     it('rejects malformed bodies with a 400 from the zod pipe', async () => {
         const res = await request(baseUrl)
             .post('/api/sessions')

@@ -19,6 +19,19 @@ describe('TokenService', () => {
         expect(new TokenService().token).toBe(first)
     })
 
+    it('rotate stores a new token and refuses when JOHNNY_TOKEN is in charge', () => {
+        const service = new TokenService()
+        const before = service.token
+        const after = service.rotate()
+        expect(after).not.toBe(before)
+        expect(readFileSync(TOKEN_FILE, 'utf8')).toBe(after)
+        expect(service.verify(before)).toBe(false)
+        expect(new TokenService().token).toBe(after)
+
+        vi.stubEnv('JOHNNY_TOKEN', 'from-env')
+        expect(() => new TokenService().rotate()).toThrow('JOHNNY_TOKEN')
+    })
+
     it('prefers JOHNNY_TOKEN over the stored token', () => {
         vi.stubEnv('JOHNNY_TOKEN', 'from-env')
         expect(new TokenService().token).toBe('from-env')

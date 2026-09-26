@@ -1,5 +1,5 @@
 import type { IncomingMessage } from 'node:http'
-import { Logger } from '@nestjs/common'
+import { Inject, Logger } from '@nestjs/common'
 import {
     ConnectedSocket,
     MessageBody,
@@ -14,6 +14,7 @@ import {
     errorMessage,
     SessionManagerService,
 } from '../../features/sessions/session-manager.service'
+import { APP_OPTIONS, type AppOptions } from '../../infrastructure/config/options'
 import { TokenService } from '../../infrastructure/token/token.service'
 
 const CLOSE_POLICY_VIOLATION = 1008
@@ -31,14 +32,20 @@ export class SessionsGateway implements OnGatewayConnection, OnGatewayDisconnect
     private readonly unsubscribers = new Map<WebSocket, Array<() => void>>()
     private readonly sessions: SessionManagerService
     private readonly tokens: TokenService
+    private readonly options: AppOptions
 
-    constructor(sessions: SessionManagerService, tokens: TokenService) {
+    constructor(
+        sessions: SessionManagerService,
+        tokens: TokenService,
+        @Inject(APP_OPTIONS) options: AppOptions,
+    ) {
         this.sessions = sessions
         this.tokens = tokens
+        this.options = options
     }
 
     handleConnection(client: WebSocket, req: IncomingMessage) {
-        if (!this.tokens.verifyCookieHeader(req.headers.cookie)) {
+        if (this.options.auth !== 'proxy' && !this.tokens.verifyCookieHeader(req.headers.cookie)) {
             client.close(CLOSE_POLICY_VIOLATION, 'Unauthorised')
             return
         }

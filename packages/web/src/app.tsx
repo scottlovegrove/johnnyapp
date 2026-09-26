@@ -11,7 +11,7 @@ import { PermissionBar } from './components/permission-bar'
 import { Sidebar } from './components/sidebar'
 import { Transcript } from './components/transcript'
 import { useSessionRoute } from './lib/session-route'
-import { socket, useSocket, useSocketStatus } from './lib/ws'
+import { redirectToLogin, socket, useSocket, useSocketStatus } from './lib/ws'
 
 export default function App() {
     const [agents, setAgents] = useState<AgentInfo[]>([])
@@ -24,19 +24,18 @@ export default function App() {
     const status = useSocketStatus()
 
     useEffect(() => {
-        fetch('/api/agents')
-            .then((r) => r.json())
-            .then(setAgents)
-        fetch('/api/projects')
-            .then((r) => r.json())
-            .then(setProjects)
-        fetch('/api/sessions')
-            .then((r) => r.json())
-            .then((list: SessionInfo[]) => {
-                setSessions(list)
-                // A stale link to a session that no longer exists falls back to the start page.
-                if (activeId && !list.some((s) => s.id === activeId)) setActiveId(null)
-            })
+        const load = async <T,>(path: string): Promise<T> => {
+            const res = await fetch(path)
+            if (res.status === 401) redirectToLogin()
+            return res.json() as Promise<T>
+        }
+        load<AgentInfo[]>('/api/agents').then(setAgents)
+        load<Project[]>('/api/projects').then(setProjects)
+        load<SessionInfo[]>('/api/sessions').then((list) => {
+            setSessions(list)
+            // A stale link to a session that no longer exists falls back to the start page.
+            if (activeId && !list.some((s) => s.id === activeId)) setActiveId(null)
+        })
         // Runs once: the route check only matters for the id present at first load.
         // oxlint-disable-next-line react/exhaustive-deps
     }, [])
@@ -83,6 +82,10 @@ export default function App() {
     async function api<T>(path: string, init?: RequestInit): Promise<T | null> {
         setError(null)
         const res = await fetch(path, { headers: { 'content-type': 'application/json' }, ...init })
+        if (res.status === 401) {
+            redirectToLogin()
+            throw new Error('signed out')
+        }
         if (res.status === 204) return null
         const body = (await res.json()) as T | { error: string }
         if (!res.ok || (body && typeof body === 'object' && 'error' in body)) {
