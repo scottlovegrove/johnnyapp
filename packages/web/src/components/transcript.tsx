@@ -151,20 +151,24 @@ const statusIcon: Record<ToolStatus, React.ReactNode> = {
 }
 
 function ToolRow({ tool }: { tool: ToolBlock }) {
+    // Some agents use the command or path as the title too; show it once.
+    const detail = tool.detail && tool.detail !== tool.title ? tool.detail : null
     return (
-        <details className="text-xs">
-            <summary className="flex cursor-pointer items-center gap-2 px-2 py-1 hover:bg-accent/50">
+        <details className="min-w-0 text-xs">
+            <summary className="flex min-w-0 cursor-pointer items-center gap-2 px-2 py-1 hover:bg-accent/50">
                 <Wrench className="size-3.5 shrink-0 text-muted-foreground" />
-                <span className="shrink-0 font-medium">{tool.title}</span>
-                {tool.detail && (
+                <span className={cn('min-w-0 truncate font-medium', !detail && 'flex-1')}>
+                    {tool.title}
+                </span>
+                {detail && (
                     <span className="min-w-0 flex-1 truncate font-mono text-muted-foreground">
-                        {tool.detail}
+                        {detail}
                     </span>
                 )}
                 <span className="ml-auto shrink-0">{statusIcon[tool.status]}</span>
             </summary>
             {tool.output && (
-                <pre className="max-h-64 overflow-auto border-t bg-muted px-2 py-1.5 font-mono">
+                <pre className="max-h-64 max-w-full overflow-auto border-t bg-muted px-2 py-1.5 font-mono">
                     {tool.output}
                 </pre>
             )}
@@ -176,7 +180,7 @@ function ToolGroup({ tools }: { tools: ToolBlock[] }) {
     const [only] = tools
     if (tools.length === 1 && only) {
         return (
-            <div className="rounded-md border">
+            <div className="min-w-0 overflow-hidden rounded-md border">
                 <ToolRow tool={only} />
             </div>
         )
@@ -191,8 +195,8 @@ function ToolGroup({ tools }: { tools: ToolBlock[] }) {
         .filter(Boolean)
         .join(' · ')
     return (
-        <details className="rounded-md border text-xs">
-            <summary className="flex cursor-pointer items-center gap-2 px-2 py-1.5">
+        <details className="min-w-0 overflow-hidden rounded-md border text-xs">
+            <summary className="flex min-w-0 cursor-pointer items-center gap-2 px-2 py-1.5">
                 <Wrench className="size-3.5 text-muted-foreground" />
                 <span className="flex-1">{summary}</span>
                 {running.length > 0 ? (
@@ -229,22 +233,22 @@ export function Transcript({ items, busy, resuming = false }: Props) {
     if (resuming && blocks.length === 0) return <Resuming />
 
     return (
-        <div className="flex-1 overflow-y-auto px-4 py-4">
-            <div className="mx-auto flex max-w-3xl flex-col gap-3">
+        <div className="flex-1 overflow-x-hidden overflow-y-auto px-4 py-4">
+            <div className="mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-3">
                 {blocks.map((b) => {
                     switch (b.kind) {
                         case 'user':
                             return (
                                 <div
                                     key={b.id}
-                                    className="self-end rounded-xl bg-primary px-4 py-2 text-sm text-primary-foreground whitespace-pre-wrap max-w-[80%]"
+                                    className="max-w-[80%] self-end rounded-xl bg-primary px-4 py-2 text-sm break-words whitespace-pre-wrap text-primary-foreground"
                                 >
                                     {b.text}
                                 </div>
                             )
                         case 'assistant':
                             return (
-                                <div key={b.id} className="prose-chat text-sm">
+                                <div key={b.id} className="prose-chat min-w-0 text-sm break-words">
                                     <Markdown>{b.text}</Markdown>
                                 </div>
                             )
@@ -273,7 +277,7 @@ export function Transcript({ items, busy, resuming = false }: Props) {
                                 <div
                                     key={b.id}
                                     className={cn(
-                                        'rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive',
+                                        'rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs break-words text-destructive',
                                     )}
                                 >
                                     {b.message}
