@@ -30,12 +30,15 @@
             "description": "Group oxlint and oxfmt updates into a single PR"
         },
         {
-            "matchPackageNames": ["hono", "@hono/**"],
-            "groupName": "hono",
-            "description": "Update hono and its adapters together"
+            "matchPackageNames": ["@nestjs/**", "nestjs-zod"],
+            "groupName": "NestJS",
+            "description": "update every NestJS package in one PR, together with nestjs-zod which pins the @nestjs/common peer range - a split bump leaves peers that cannot resolve"
         },
         {
-            "matchPackageNames": ["@agentclientprotocol/sdk", "@zed-industries/claude-code-acp"],
+            "matchPackageNames": [
+                "@agentclientprotocol/sdk",
+                "@agentclientprotocol/claude-agent-acp"
+            ],
             "groupName": "ACP",
             "description": "The Claude Code ACP adapter depends on the ACP SDK; bump them together so the protocol versions stay aligned"
         }

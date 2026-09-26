@@ -43,8 +43,9 @@ export class AcpAgent implements AgentAdapter {
         })
         this.child = child
 
+        // Adapters write diagnostics to stderr; surface them only when debugging.
         child.stderr?.on('data', (chunk: Buffer) => {
-            this.logger.warn(chunk.toString().trimEnd())
+            this.logger.debug(chunk.toString().trimEnd())
         })
 
         if (!child.stdin || !child.stdout) {

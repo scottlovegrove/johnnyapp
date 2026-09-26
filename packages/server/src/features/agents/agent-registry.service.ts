@@ -22,7 +22,7 @@ const specs: AcpAgentSpec[] = [
         id: 'claude-code',
         name: 'Claude Code',
         command: process.execPath,
-        args: [bundledBin('@zed-industries/claude-code-acp', 'claude-code-acp')],
+        args: [bundledBin('@agentclientprotocol/claude-agent-acp', 'claude-agent-acp')],
     },
 ]
 

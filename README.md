@@ -2,7 +2,7 @@
 
 A self-hosted web chat that drives the AI coding agents you already have installed. Runs as one local Node process; the browser talks to it, it talks to the agent.
 
-Agents are integrated through the [Agent Client Protocol](https://agentclientprotocol.com) (ACP), so anything that speaks ACP over stdio can be plugged in. Claude Code is the first, via the bundled `@zed-industries/claude-code-acp` adapter, which uses your existing Claude Code login.
+Agents are integrated through the [Agent Client Protocol](https://agentclientprotocol.com) (ACP), so anything that speaks ACP over stdio can be plugged in. Claude Code is the first, via the bundled `@agentclientprotocol/claude-agent-acp` adapter, which uses your existing Claude Code login.
 
 ## Run
 
@@ -14,7 +14,7 @@ npm start            # http://127.0.0.1:56469/?token=…
 
 On first start a token is generated and stored in `~/.config/johnny/token`. The printed URL includes it and sets a cookie; every request without that cookie is rejected. Anyone who can reach the server can run shell commands on your machine through the agent, so keep the token private.
 
-Flags: `--port 56469`, `--host 127.0.0.1` (pass `0.0.0.0` to expose on your network — put it behind a reverse proxy with websocket support), `--no-open`. Env: `PORT`, `HOST`, `JOHNNY_TOKEN`, `JOHNNY_CONFIG_DIR`.
+Flags: `--port 56469`, `--host 127.0.0.1` (pass `0.0.0.0` to expose on your network — put it behind a reverse proxy with websocket support), `--no-open`. Env: `PORT`, `HOST`, `JOHNNY_TOKEN`, `JOHNNY_CONFIG_DIR`, `JOHNNY_DEBUG` (also shows the agent adapter's stderr).
 
 ## Develop
 

@@ -11,7 +11,11 @@ import { TokenService } from './infrastructure/token/token.service'
 
 async function bootstrap() {
     const logger = new Logger('Johnny')
-    const app = await NestFactory.create<NestExpressApplication>(AppModule)
+    const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+        logger: process.env.JOHNNY_DEBUG
+            ? ['log', 'error', 'warn', 'debug', 'verbose']
+            : ['log', 'error', 'warn'],
+    })
     const options = app.get<AppOptions>(APP_OPTIONS)
     app.disable('x-powered-by')
     app.useWebSocketAdapter(new WsAdapter(app))
