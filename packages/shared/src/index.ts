@@ -16,9 +16,18 @@ export interface AgentInfo {
   reason?: string;
 }
 
+/** A directory the user has registered; sessions are started inside one. */
+export interface Project {
+  id: string;
+  name: string;
+  path: string;
+  createdAt: string;
+}
+
 export interface SessionInfo {
   id: string;
   agentId: string;
+  projectId: string;
   cwd: string;
   title: string;
   createdAt: string;

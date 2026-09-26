@@ -10,6 +10,7 @@ import { Hono } from "hono";
 import open from "open";
 import type { ClientMessage, ServerMessage } from "@johnny/shared";
 import { loadToken, requireToken } from "./auth.js";
+import { ProjectStore } from "./projects.js";
 import { SessionManager, errorMessage } from "./sessions.js";
 
 const { values: flags } = parseArgs({
@@ -24,6 +25,7 @@ const port = Number(flags.port);
 const host = flags.host!;
 const token = loadToken();
 const sessions = new SessionManager();
+const projects = new ProjectStore();
 
 const app = new Hono();
 const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({ app });
@@ -32,13 +34,29 @@ app.get("/api/health", (c) => c.json({ ok: true }));
 app.use("*", requireToken(token));
 
 app.get("/api/agents", (c) => c.json(sessions.agents.list()));
+app.get("/api/projects", (c) => c.json(projects.list()));
+app.post("/api/projects", async (c) => {
+  const body = (await c.req.json()) as { path?: string; name?: string };
+  if (!body.path) return c.json({ error: "path is required" }, 400);
+  try {
+    return c.json(projects.add(body.path, body.name), 201);
+  } catch (err) {
+    return c.json({ error: errorMessage(err) }, 400);
+  }
+});
+app.delete("/api/projects/:id", (c) =>
+  projects.remove(c.req.param("id")) ? c.body(null, 204) : c.json({ error: "Not found" }, 404),
+);
+
 app.get("/api/sessions", (c) => c.json(sessions.list()));
 app.post("/api/sessions", async (c) => {
-  const body = (await c.req.json()) as { agentId?: string; cwd?: string };
-  if (!body.agentId || !body.cwd) return c.json({ error: "agentId and cwd are required" }, 400);
-  if (!existsSync(body.cwd)) return c.json({ error: `Directory not found: ${body.cwd}` }, 400);
+  const body = (await c.req.json()) as { agentId?: string; projectId?: string };
+  if (!body.agentId || !body.projectId) return c.json({ error: "agentId and projectId are required" }, 400);
+  const project = projects.get(body.projectId);
+  if (!project) return c.json({ error: "Unknown project" }, 404);
+  if (!existsSync(project.path)) return c.json({ error: `Directory not found: ${project.path}` }, 400);
   try {
-    return c.json(await sessions.create(body.agentId, body.cwd), 201);
+    return c.json(await sessions.create(body.agentId, project), 201);
   } catch (err) {
     return c.json({ error: errorMessage(err) }, 500);
   }

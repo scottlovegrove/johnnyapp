@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { AgentInfo, PermissionRequest, SessionInfo, TranscriptItem } from "@johnny/shared";
+import type { AgentInfo, PermissionRequest, Project, SessionInfo, TranscriptItem } from "@johnny/shared";
 import { Composer } from "./components/Composer";
 import { PermissionBar } from "./components/PermissionBar";
 import { Sidebar } from "./components/Sidebar";
@@ -8,6 +8,7 @@ import { socket, useSocket, useSocketStatus } from "./lib/ws";
 
 export default function App() {
   const [agents, setAgents] = useState<AgentInfo[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [transcript, setTranscript] = useState<TranscriptItem[]>([]);
@@ -17,6 +18,7 @@ export default function App() {
 
   useEffect(() => {
     fetch("/api/agents").then((r) => r.json()).then(setAgents);
+    fetch("/api/projects").then((r) => r.json()).then(setProjects);
     fetch("/api/sessions").then((r) => r.json()).then(setSessions);
   }, []);
 
@@ -59,20 +61,39 @@ export default function App() {
     }
   });
 
-  const createSession = useCallback(async (agentId: string, cwd: string) => {
+  async function api<T>(path: string, init?: RequestInit): Promise<T | null> {
     setError(null);
-    const res = await fetch("/api/sessions", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agentId, cwd }),
-    });
-    const body = (await res.json()) as SessionInfo | { error: string };
-    if (!res.ok || "error" in body) {
-      setError("error" in body ? body.error : `HTTP ${res.status}`);
-      return;
+    const res = await fetch(path, { headers: { "content-type": "application/json" }, ...init });
+    if (res.status === 204) return null;
+    const body = (await res.json()) as T | { error: string };
+    if (!res.ok || (body && typeof body === "object" && "error" in body)) {
+      setError(body && typeof body === "object" && "error" in body ? body.error : `HTTP ${res.status}`);
+      throw new Error("request failed");
     }
-    setSessions((prev) => (prev.some((s) => s.id === body.id) ? prev : [body, ...prev]));
-    setActiveId(body.id);
+    return body as T;
+  }
+
+  const createSession = useCallback(async (agentId: string, projectId: string) => {
+    const session = await api<SessionInfo>("/api/sessions", {
+      method: "POST",
+      body: JSON.stringify({ agentId, projectId }),
+    }).catch(() => null);
+    if (!session) return;
+    setSessions((prev) => (prev.some((s) => s.id === session.id) ? prev : [session, ...prev]));
+    setActiveId(session.id);
+  }, []);
+
+  const addProject = useCallback(async (path: string) => {
+    const project = await api<Project>("/api/projects", { method: "POST", body: JSON.stringify({ path }) }).catch(
+      () => null,
+    );
+    if (!project) throw new Error("add failed");
+    setProjects((prev) => (prev.some((p) => p.id === project.id) ? prev : [...prev, project]));
+  }, []);
+
+  const removeProject = useCallback(async (id: string) => {
+    await api(`/api/projects/${id}`, { method: "DELETE" }).catch(() => null);
+    setProjects((prev) => prev.filter((p) => p.id !== id));
   }, []);
 
   const active = sessions.find((s) => s.id === activeId) ?? null;
@@ -81,10 +102,13 @@ export default function App() {
     <div className="flex h-screen">
       <Sidebar
         agents={agents}
+        projects={projects}
         sessions={sessions}
         activeId={activeId}
         onSelect={setActiveId}
-        onCreate={createSession}
+        onCreateSession={createSession}
+        onAddProject={addProject}
+        onRemoveProject={removeProject}
         status={status}
       />
       <main className="flex min-w-0 flex-1 flex-col">
@@ -118,7 +142,7 @@ export default function App() {
           </>
         ) : (
           <div className="flex flex-1 items-center justify-center text-muted-foreground">
-            Pick a session or start a new one.
+            Add a project, then start a session from it.
           </div>
         )}
       </main>

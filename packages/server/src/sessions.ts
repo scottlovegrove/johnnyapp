@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type {
   PermissionRequest,
+  Project,
   ServerMessage,
   SessionInfo,
   TranscriptItem,
@@ -74,10 +75,18 @@ export class SessionManager {
     return this.sessions.get(sessionId);
   }
 
-  async create(agentId: string, cwd: string): Promise<SessionInfo> {
+  async create(agentId: string, project: Project): Promise<SessionInfo> {
     const adapter = await this.agents.get(agentId);
-    const id = await adapter.newSession(cwd);
-    const info: SessionInfo = { id, agentId, cwd, title: cwd.split("/").pop() ?? cwd, createdAt: now(), busy: false };
+    const id = await adapter.newSession(project.path);
+    const info: SessionInfo = {
+      id,
+      agentId,
+      projectId: project.id,
+      cwd: project.path,
+      title: `Session ${new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`,
+      createdAt: now(),
+      busy: false,
+    };
     this.sessions.set(id, { info, transcript: [], pending: null });
     for (const sub of this.globalSubscribers) sub({ type: "session", session: info });
     return info;
