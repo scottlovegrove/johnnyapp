@@ -19,6 +19,16 @@ Guidance for anyone (human or agent) working in this repository.
 - **Spelling** in prose (docs, comments, commit messages, UI copy) is British English.
 - **Code comments** describe what the code does and why in its own terms. Never reference pull requests, rollout stages or "follow-ups" in code or docstrings.
 
+## Testing
+
+Tests are the safety net for code that is written by agents and rarely read line by line, so they matter more here than usual. They are also deliberately focused:
+
+- Test the **core behaviour** of each part: the session lifecycle, the agent adapter over a real stdio connection, auth, the websocket contract, and the UI components that render the transcript and collect input. A representative edge case or two per area is fine; do not enumerate every permutation or test trivial glue.
+- Prefer one test that drives a real flow (Nest app + websocket, real fake-agent process) over many that assert on mocks.
+- **Server**: `vitest` with `*.spec.ts` next to the code under test. Services are constructed directly with fakes; the gateway is tested through the real `AppModule` with only `AgentRegistryService` overridden. `test/fixtures/fake-acp-agent.mjs` is a scripted ACP agent for exercising `AcpAgent`.
+- **Web**: `vitest` + jsdom + Testing Library, `*.test.tsx` next to the component. Query by role and visible text, drive with `userEvent`.
+- Run everything with `npm test` from the root. CI runs it on every pull request and push to `main`.
+
 ## Layout
 
 ```

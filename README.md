@@ -34,6 +34,8 @@ npm run check:fix    # format and auto-fix
 npm run type-check
 ```
 
+Tests use vitest: `npm test` runs every package's suite (`*.spec.ts` in the server, `*.test.tsx` in the web app). See `AGENTS.md` for what is and is not worth testing here.
+
 A husky pre-commit hook runs `type-check` and `check:fix` against the staged files. CI (`.github/workflows/ci.yml`) runs format, lint, type-check and build on every push to `main` and every pull request.
 
 Dependencies are pinned to exact versions (`save-exact=true` in `.npmrc`) and kept current by Renovate (`renovate.json`), which groups related packages and automerges minor/patch bumps once CI passes.

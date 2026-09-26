@@ -12,7 +12,9 @@
   "scripts": {
     "build": "nest build && rm -rf public && cp -r ../web/dist public",
     "dev": "JOHNNY_DEV=1 nest start --watch",
-    "start": "node dist/main.js"
+    "start": "node dist/main.js",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@agentclientprotocol/claude-agent-acp": "0.81.2",
