@@ -37,6 +37,8 @@ export interface SessionInfo {
     origin: 'johnny' | 'agent'
     /** True while a prompt turn is in flight. */
     busy: boolean
+    /** True while the agent is re-attaching to the session and replaying its history. */
+    resuming: boolean
 }
 
 /** A single stored item in a session's transcript. */

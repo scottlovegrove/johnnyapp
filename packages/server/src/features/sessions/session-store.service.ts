@@ -7,7 +7,7 @@ import { CONFIG_DIR } from '../../infrastructure/token/token.service'
 const FILE = join(CONFIG_DIR, 'sessions.json')
 
 /** What survives a restart: everything about a session except its live state. */
-export type SessionRecord = Omit<SessionInfo, 'busy'>
+export type SessionRecord = Omit<SessionInfo, 'busy' | 'resuming'>
 
 interface StoreFile {
     sessions: SessionRecord[]
@@ -43,7 +43,7 @@ export class SessionStoreService {
     }
 
     upsert(info: SessionInfo | SessionRecord): void {
-        const { busy: _busy, ...record } = info as SessionInfo
+        const { busy: _busy, resuming: _resuming, ...record } = info as SessionInfo
         this.records.set(record.id, record)
         this.ignored.delete(record.id)
         this.save()

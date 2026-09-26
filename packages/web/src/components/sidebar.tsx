@@ -206,8 +206,16 @@ export function Sidebar({
                                                 />
                                             )}
                                             <span className="truncate">{s.title}</span>
-                                            {s.busy && (
-                                                <span className="ml-auto size-1.5 shrink-0 animate-pulse rounded-full bg-emerald-500" />
+                                            {(s.busy || s.resuming) && (
+                                                <span
+                                                    className={cn(
+                                                        'ml-auto size-1.5 shrink-0 animate-pulse rounded-full',
+                                                        s.resuming
+                                                            ? 'bg-amber-500'
+                                                            : 'bg-emerald-500',
+                                                    )}
+                                                    title={s.resuming ? 'Resuming' : 'Working'}
+                                                />
                                             )}
                                         </button>
                                         <Button

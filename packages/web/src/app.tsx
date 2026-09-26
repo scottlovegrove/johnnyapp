@@ -161,7 +161,11 @@ export default function App() {
                             <span className="ml-2 text-muted-foreground">{active.cwd}</span>
                             <span className="ml-2 text-muted-foreground">· {active.agentId}</span>
                         </header>
-                        <Transcript items={transcript} busy={active.busy} />
+                        <Transcript
+                            items={transcript}
+                            busy={active.busy}
+                            resuming={active.resuming}
+                        />
                         {pending && (
                             <PermissionBar
                                 request={pending}
