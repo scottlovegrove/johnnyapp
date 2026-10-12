@@ -17,7 +17,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@agentclientprotocol/claude-agent-acp": "0.85.1",
+    "@agentclientprotocol/claude-agent-acp": "0.86.0",
     "@agentclientprotocol/sdk": "1.7.0",
     "@johnny/shared": "*",
     "@nestjs/common": "12.1.2",
