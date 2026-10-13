@@ -30,13 +30,13 @@
     "open": "11.0.4",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2",
-    "ws": "8.21.3",
+    "ws": "8.22.0",
     "zod": "4.6.5"
   },
   "devDependencies": {
     "@types/express": "5.0.6",
     "@types/node": "24.19.1",
-    "@types/ws": "8.18.1"
+    "@types/ws": "8.18.2"
   },
   "engines": {
     "node": ">=24.15.0"
