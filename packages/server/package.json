@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@agentclientprotocol/claude-agent-acp": "0.88.0",
-    "@agentclientprotocol/sdk": "1.7.0",
+    "@agentclientprotocol/sdk": "1.8.0",
     "@johnny/shared": "*",
     "@nestjs/common": "12.1.2",
     "@nestjs/core": "12.1.2",
