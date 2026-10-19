@@ -30,7 +30,7 @@
     "@nestjs/testing": "12.1.2",
     "@testing-library/jest-dom": "7.0.1",
     "@testing-library/react": "16.3.3",
-    "@testing-library/user-event": "14.6.7",
+    "@testing-library/user-event": "14.6.8",
     "@types/supertest": "7.2.1",
     "concurrently": "9.2.5",
     "husky": "9.1.7",
