@@ -38,7 +38,7 @@
     "oxfmt": "0.73.0",
     "oxlint": "1.88.0",
     "supertest": "7.3.1",
-    "typescript": "6.0.3",
+    "typescript": "7.0.2",
     "vitest": "4.1.12"
   },
   "overrides": {
